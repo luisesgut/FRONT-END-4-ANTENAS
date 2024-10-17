@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import './productdetail.scss';
+import './EntradaAlmacen.scss';
 import * as signalR from '@microsoft/signalr';
 import { Subject } from 'rxjs';
+import Swal from 'sweetalert2';
 
 // Definimos los tipos para Producto
 interface Producto {
-    id?: number; // Si el id existe, lo agregamos como opcional
-    urlImagen: string;
+    id?: number; 
+    Imagen: string;
     fecha: string;
     area: string;
     claveProducto: string;
@@ -39,30 +40,39 @@ const fetchData = async (epc: string): Promise<Producto | null> => {
 };
 
 // Cargar datos
+// Cargar datos
+// Cargar datos
 const loadData = async (epc: string, setProductos: React.Dispatch<React.SetStateAction<Producto[]>>) => {
     try {
         const data = await fetchData(epc);
-        if (data) {
-            setProductos((prev) => [
-                {
-                    urlImagen: data.urlImagen || 'https://www.jnfac.or.kr/img/noimage.jpg',
-                    fecha: data.fecha || 'N/A',
-                    area: data.area || 'N/A',
-                    claveProducto: data.claveProducto || 'N/A',
-                    nombreProducto: data.nombreProducto || 'N/A',
-                    pesoBruto: data.pesoBruto || 'N/A',
-                    pesoNeto: data.pesoNeto || 'N/A',
-                    pesoTarima: data.pesoTarima || 'N/A',
-                    piezas: data.piezas || 'N/A',
-                    uom: data.uom || 'N/A',
-                    fechaEntrada: data.fechaEntrada || 'N/A',
-                    productPrintCard: data.productPrintCard || 'N/A'
-                },
-                ...prev
-            ]);
-        } else {
+        if (!data) {
             console.warn(`No se encontraron datos para el EPC: ${epc}`);
+            return; // Salir si no hay datos
         }
+
+        const imageResponse = await fetch(`http://172.16.10.31/api/Image/${data.productPrintCard}`);
+        const imageData = await imageResponse.json(); // Obtener el JSON completo
+        const imageBase64 = imageData.imageBase64 || 'https://www.jnfac.or.kr/img/noimage.jpg'; // Extraer el string Base64 o URL por defecto
+
+        console.log(imageBase64);
+
+        setProductos((prev) => [
+            {
+                Imagen: imageBase64,
+                fecha: data.fecha || 'N/A',
+                area: data.area || 'N/A',
+                claveProducto: data.claveProducto || 'N/A',
+                nombreProducto: data.nombreProducto || 'N/A',
+                pesoBruto: data.pesoBruto || 'N/A',
+                pesoNeto: data.pesoNeto || 'N/A',
+                pesoTarima: data.pesoTarima || 'N/A',
+                piezas: data.piezas || 'N/A',
+                uom: data.uom || 'N/A',
+                fechaEntrada: data.fechaEntrada || 'N/A',
+                productPrintCard: data.productPrintCard || 'N/A'
+            },
+            ...prev
+        ]);
     } catch (error) {
         console.error("Error al cargar los datos del EPC:", error);
     }
@@ -70,14 +80,31 @@ const loadData = async (epc: string, setProductos: React.Dispatch<React.SetState
 
 
 // Función para cambiar el estado
-const updateStatus = async (epc: string, status: number) => {
+const updateStatus = async (epc: string, newStatus: number) => {
     try {
-        const response = await fetch(`http://172.16.10.31/api/RfidLabel/Status/${epc}`, {
+        const statusResponse = await fetch(`http://172.16.10.31/api/RfidLabel/GetStatusByRFID/${epc}`);
+        
+        if (!statusResponse.ok) {
+            console.error('Error en la respuesta del estado:', statusResponse.status);
+            return;
+        }
+        
+        const statusData = await statusResponse.json();
+        const currentStatus = statusData.myInteger; // Cambié el nombre de la variable para evitar confusión
+        console.log('Estatus de la etiqueta:', currentStatus);
+        
+        // Si el estado actual es mayor a 2, mostrar alerta y salir
+        if (currentStatus > 2) {
+            await Swal.fire('Tarima', 'Esta tarima ya se encuentra en almacen', 'info');
+            return null;
+        }
+
+        const response = await fetch(`http://172.16.10.31/api/RfidLabel/UpdateStatusByRFID/${epc}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ status: newStatus }) // Usa el nuevo estado que pasaste como parámetro
         });
 
         if (response.ok) {
@@ -91,50 +118,53 @@ const updateStatus = async (epc: string, status: number) => {
     }
 };
 
+
 // Función para hacer registro de entradas en ExtraInfo
-const extraInfo = async (epc: string, antena: string) => {
+const extraInfo = async (epc: string, antena: string, fecha : string ) => {
     try {
+
         const epcData = await fetchData(epc);
 
-        if (epcData && epcData.id) {
-            const prodEtiquetaRFIDId = epcData.id;
-            console.log("ID del producto para EPC:", prodEtiquetaRFIDId);
-            
-            const bodyData = {
-                prodEtiquetaRFIDId: prodEtiquetaRFIDId,
-                ubicacion: "AlmacenPT",
-                fechaEntrada: new Date().toISOString(),
-                antena: antena
-            };
 
-            console.log("Datos enviados en el POST:", bodyData);
-
-            const response = await fetch('http://172.16.10.31/api/ProdExtraInfo/EntradaAlmacen', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(bodyData)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                console.log("Respuesta del servidor:", result);
-                return result;
-            } else {
-                // Captura de errores
-                console.error("Error al registrar la información. Estado:", response.status, response.statusText);
-                return null;
-            }
-        } else {
+        // Comprobar si se obtuvo el ID del EPC
+        if (!epcData || !epcData.id) {
             console.error("No se pudo obtener el ID del EPC");
             return null;
         }
+
+        const prodEtiquetaRFIDId = epcData.id;
+        console.log("ID del producto para EPC:", prodEtiquetaRFIDId);
+        
+        const response = await fetch('http://172.16.10.31/api/ProdExtraInfo/EntradaAlmacen', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                prodEtiquetaRFIDId: prodEtiquetaRFIDId,
+                fechaEntrada: new Date().toISOString(),
+                antena: 'EntradaPT'
+            })
+        });
+
+        if (!response.ok) {
+            console.error("Error al registrar la información. Estado:", response.status, response.statusText);
+            return null;
+        }
+
+        const result = await response.json();
+        console.log("Respuesta del servidor:", result);
+        return result;
+
+
     } catch (error) {
         console.error("Error al conectarse con el endpoint de registro:", error);
         return null;
     }
 };
+
+
+
 
 const ProductDetail: React.FC = () => {
     const [productos, setProductos] = useState<Producto[]>([]); // Lista de productos
@@ -174,7 +204,7 @@ const ProductDetail: React.FC = () => {
                 // Procesar los datos según lo necesites
                 loadData(epcSinEspacios, setProductos);
                 updateStatus(epcSinEspacios, 2); // Cambia el estado de EPC
-                extraInfo(epcSinEspacios, antennaPort); // Registra la información adicional
+                extraInfo(epcSinEspacios, antennaPort,lastSeenTime); // Registra la información adicional
             } else {
                 console.warn("Formato de mensaje incorrecto o faltan datos:", message);
             }
@@ -221,7 +251,7 @@ const ProductDetail: React.FC = () => {
             <div className="container">
                 {productos.length > 0 && (
                     <div className="product-image">
-                        <img src={productos[0].urlImagen} alt="Imagen del Producto" />
+                        <img src={productos[0].Imagen} alt="Imagen del Producto" />
                     </div>
                 )}
                 <div className="product-details">

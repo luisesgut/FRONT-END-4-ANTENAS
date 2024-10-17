@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.scss'; // Ajuste de importación para TSX, sin extensión
 import { Dashboard } from './components/dashboard/Dashboard';
-import ProductDetail from './components/entradaAlmacen/ProductDetail';
+import EntradaAlmacen from './components/entradaAlmacen/EntradaAlmacen';
 import SalidaMP from './components/salidaAlmacen/SalidaMP'; 
 import Cortina1 from './components/embarque1/Cortina1';
 import Cortina2 from './components/embarque2/Cortina2';
@@ -23,7 +23,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<Dashboard />} /> {/* Dashboard principal */}
           <Route path="/salida-almacen" element={<SalidaMP />} /> {/* Vista Salida Almacén */}
-          <Route path="/entrada-almacen" element={<ProductDetail />} /> {/* Vista Entrada Almacén */}
+          <Route path="/entrada-almacen" element={<EntradaAlmacen />} /> {/* Vista Entrada Almacén */}
           <Route path="/embarque-1" element={<Cortina1 />} />
           <Route path="/embarque-2" element={<Cortina2 />} />
           <Route path="/embarque-3" element={<Cortina3 />} />

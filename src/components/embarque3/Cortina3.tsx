@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './productdetail.scss';
+import './Cortina3.scss';
 import * as signalR from '@microsoft/signalr';
 import { Subject } from 'rxjs';
 
@@ -42,9 +42,13 @@ const fetchData = async (epc: string): Promise<Producto | null> => {
 const loadData = async (epc: string, setProductos: React.Dispatch<React.SetStateAction<Producto[]>>) => {
     const data = await fetchData(epc);
     if (data) {
+
+        const imageResponse = await fetch(`http://172.16.10.31/api/Image/${data.productPrintCard}`);
+        const imageBase64 = imageResponse.ok ? await imageResponse.text() : 'https://www.jnfac.or.kr/img/noimage.jpg';
+
         setProductos((prev) => [
             {
-                urlImagen: data.urlImagen || 'https://www.jnfac.or.kr/img/noimage.jpg',
+                urlImagen: imageBase64,
                 fecha: data.fecha || 'N/A',
                 area: data.area || 'N/A',
                 claveProducto: data.claveProducto || 'N/A',
