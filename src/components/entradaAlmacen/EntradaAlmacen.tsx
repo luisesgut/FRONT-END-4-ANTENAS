@@ -40,39 +40,36 @@ const fetchData = async (epc: string): Promise<Producto | null> => {
 };
 
 // Cargar datos
-// Cargar datos
-// Cargar datos
 const loadData = async (epc: string, setProductos: React.Dispatch<React.SetStateAction<Producto[]>>) => {
     try {
         const data = await fetchData(epc);
-        if (!data) {
+        if (data) {
+
+            const imageResponse = await fetch(`http://172.16.10.31/api/Image/${data.productPrintCard}`);
+            const imageData = await imageResponse.json();
+            const imageString = imageData.imageBase64;
+
+            console.log(imageString);
+            setProductos((prev) => [
+                {
+                    Imagen: imageString || 'https://www.jnfac.or.kr/img/noimage.jpg',
+                    fecha: data.fecha || 'N/A',
+                    area: data.area || 'N/A',
+                    claveProducto: data.claveProducto || 'N/A',
+                    nombreProducto: data.nombreProducto || 'N/A',
+                    pesoBruto: data.pesoBruto || 'N/A',
+                    pesoNeto: data.pesoNeto || 'N/A',
+                    pesoTarima: data.pesoTarima || 'N/A',
+                    piezas: data.piezas || 'N/A',
+                    uom: data.uom || 'N/A',
+                    fechaEntrada: data.fechaEntrada || 'N/A',
+                    productPrintCard: data.productPrintCard || 'N/A'
+                },
+                ...prev
+            ]);
+        } else {
             console.warn(`No se encontraron datos para el EPC: ${epc}`);
-            return; // Salir si no hay datos
         }
-
-        const imageResponse = await fetch(`http://172.16.10.31/api/Image/${data.productPrintCard}`);
-        const imageData = await imageResponse.json(); // Obtener el JSON completo
-        const imageBase64 = imageData.imageBase64 || 'https://www.jnfac.or.kr/img/noimage.jpg'; // Extraer el string Base64 o URL por defecto
-
-        console.log(imageBase64);
-
-        setProductos((prev) => [
-            {
-                Imagen: imageBase64,
-                fecha: data.fecha || 'N/A',
-                area: data.area || 'N/A',
-                claveProducto: data.claveProducto || 'N/A',
-                nombreProducto: data.nombreProducto || 'N/A',
-                pesoBruto: data.pesoBruto || 'N/A',
-                pesoNeto: data.pesoNeto || 'N/A',
-                pesoTarima: data.pesoTarima || 'N/A',
-                piezas: data.piezas || 'N/A',
-                uom: data.uom || 'N/A',
-                fechaEntrada: data.fechaEntrada || 'N/A',
-                productPrintCard: data.productPrintCard || 'N/A'
-            },
-            ...prev
-        ]);
     } catch (error) {
         console.error("Error al cargar los datos del EPC:", error);
     }
@@ -82,23 +79,7 @@ const loadData = async (epc: string, setProductos: React.Dispatch<React.SetState
 // Función para cambiar el estado
 const updateStatus = async (epc: string, newStatus: number) => {
     try {
-        const statusResponse = await fetch(`http://172.16.10.31/api/RfidLabel/GetStatusByRFID/${epc}`);
         
-        if (!statusResponse.ok) {
-            console.error('Error en la respuesta del estado:', statusResponse.status);
-            return;
-        }
-        
-        const statusData = await statusResponse.json();
-        const currentStatus = statusData.myInteger; // Cambié el nombre de la variable para evitar confusión
-        console.log('Estatus de la etiqueta:', currentStatus);
-        
-        // Si el estado actual es mayor a 2, mostrar alerta y salir
-        if (currentStatus > 2) {
-            await Swal.fire('Tarima', 'Esta tarima ya se encuentra en almacen', 'info');
-            return null;
-        }
-
         const response = await fetch(`http://172.16.10.31/api/RfidLabel/UpdateStatusByRFID/${epc}`, {
             method: 'PUT',
             headers: {

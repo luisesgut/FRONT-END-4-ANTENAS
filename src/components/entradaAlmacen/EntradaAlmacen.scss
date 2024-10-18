@@ -17,7 +17,7 @@ $box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .product-list-container {
-  flex: 1;
+  flex: 0.1; // Cambiado de 1 a 0.5 para reducir el tamaño
   padding: 1rem;
   background-color: $secondary-color;
   border-radius: 10px;
@@ -84,7 +84,7 @@ $box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  flex: 2;
+  flex: 2.5; // Cambiado de 2 a 2.5 para mayor espacio
   padding: 1rem;
   background-color: $secondary-color;
   border-radius: 10px;
@@ -92,6 +92,9 @@ $box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   height: 96%; // Para que se ajuste al contenedor
   overflow: auto; // Para evitar que se desborde
 }
+
+
+
 
 .product-image {
   flex: 1;
